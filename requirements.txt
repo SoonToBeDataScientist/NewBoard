@@ -1,0 +1,21 @@
+# Deploy: GitHub repo (app.py, quant_engine.py, advanced_features.py,
+# requirements.txt di root) -> share.streamlit.io -> New app -> Deploy.
+# Versi di-pin (item D panduan implementasi) supaya build Streamlit Cloud
+# reproducible — sebelumnya tanpa pin, versi baru library bisa diam-diam
+# mengubah perilaku/breaking API tanpa ketahuan.
+streamlit>=1.36,<2
+numpy>=1.26
+pandas>=2.0
+plotly>=5.20
+yfinance>=0.2.40
+ccxt>=4.0
+arch>=6.3            # GARCH / GJR-GARCH (Student-t dist — fix 2d)
+lightgbm>=4.0        # ML walk-forward signal + meta-labeling (4b)
+xgboost>=2.0         # ML walk-forward signal (model_type="xgboost"/"ensemble")
+scikit-learn>=1.4    # IsotonicRegression calibration, LogisticRegression meta-model
+scipy>=1.11          # HRP (hierarchical clustering), meta-model GBM probability (norm.cdf), PSR (3b)
+anthropic>=0.39      # opsional — narasi AI pakai Claude kalau ANTHROPIC_API_KEY diisi
+google-genai>=1.0    # opsional — narasi AI pakai Gemini (gratis) kalau GEMINI_API_KEY diisi, dicoba duluan
+groq>=0.11           # opsional — fallback ke Groq (gratis, kuota terpisah) kalau GROQ_API_KEY diisi
+requests>=2.31       # dipakai untuk fallback Twelve Data + sentimen berita Marketaux (opsional)
+# streamlit-gsheets  # uncomment kalau mau journal persist lewat Google Sheets
