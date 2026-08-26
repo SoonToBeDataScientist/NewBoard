@@ -2,8 +2,12 @@
 
 Skeleton dari panduan implementasi (item E). Sesuaikan WATCHLIST dengan
 watchlist ril kamu. Juga memanggil update_signal_log_forward_returns() (4c)
-supaya forward return signal log terisi otomatis tiap hari tanpa perlu klik
-tombol manual di UI — lihat catatan penutup implementasi-review-patch-2.md.
+dan arena.update_arena_log() supaya forward test live (Signal Log + Arena
+Strategi) terisi otomatis tiap hari tanpa perlu klik tombol manual di UI.
+
+PENTING untuk auto live tracking Arena: step commit di workflow harus
+mengikutkan `strategy_arena_log.csv` (mis. `git add -A` sudah cukup; kalau
+pakai `git add cache/ signals_log.csv`, tambahkan file arena-nya juga).
 """
 import json
 import os
@@ -15,6 +19,7 @@ from quant_engine import (
     summarize_paths, run_backtest, classify_liquidity,
     update_signal_log_forward_returns,
 )
+import strategy_arena as arena
 
 WATCHLIST = ["BBCA", "TLKM", "UNVR", "ANTM", "SMGR"]  # dst — sesuaikan
 os.makedirs("cache", exist_ok=True)
@@ -36,6 +41,17 @@ for tkr in WATCHLIST:
         print(f"OK {tkr}")
     except Exception as e:
         print(f"FAIL {tkr}: {e}")
+        continue
+
+    # ARENA LIVE TRACKING: catat posisi harian semua strategi untuk simbol
+    # ini (idempotent — baris duplikat tidak ditulis dua kali). Reuse `df`
+    # yang sudah di-fetch di atas — nol tambahan API call.
+    try:
+        status = arena.update_arena_log(tkr, "stock_id", df)
+        n_new = sum(1 for v in status.values() if str(v).startswith("+"))
+        print(f"OK arena log {tkr} ({n_new} strategi baris baru)")
+    except Exception as e:
+        print(f"FAIL arena log {tkr}: {e}")
 
 # FIX 4c (lanjutan): isi forward return signal log yang sudah cukup umur,
 # supaya live IC di Tab 4 selalu up to date tanpa klik manual tiap hari.
