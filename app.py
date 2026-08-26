@@ -13,7 +13,7 @@ precomputed, since there's no more RAM-ceiling reason to split them.
 DEPLOY (all via browser, no terminal needed):
   1. Create a GitHub repo, upload these files via the web "Add file ->
      Upload files" button: app.py, quant_engine.py, advanced_features.py,
-     requirements.txt.
+     strategy_arena.py, requirements.txt.
   2. share.streamlit.io -> New app -> pick that repo -> Deploy.
   3. (Optional) App settings -> Secrets -> add ANTHROPIC_API_KEY if you
      want the AI Narrative button to call the real API instead of the
@@ -43,6 +43,7 @@ from quant_engine import (
     _FALLBACK_CRYPTO_IDR, _FALLBACK_CRYPTO_USDT,
 )  # underscore-prefixed names are skipped by `import *`, need explicit import
 import advanced_features as adv
+import strategy_arena as arena
 
 # ==========================================================================
 # ==== TRADE JOURNAL (I/O ringan — CSV lokal atau Google Sheets kalau ====
@@ -872,10 +873,10 @@ def fetch_live_gainers_crypto(exchange_id: str, quote: str,
 # (this section used to have its OWN duplicate definitions that silently
 # shadowed the ones in Section 1.5 — see quant_engine.py module docstring).
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(
     ["🎲 Monte Carlo", "📈 Signal", "🔁 Backtest", "✅ Checkpoint & Journal",
      "🔍 Screener", "📑 Fundamental", "🔥 Live Gainers", "🎯 Kesimpulan",
-     "📐 Portofolio (Markowitz)"]
+     "📐 Portofolio (Markowitz)", "🏟️ Arena Strategi"]
 )
 
 # ---- TAB 1: MONTE CARLO ----
@@ -3745,3 +3746,172 @@ with tab9:
                         "(cek dulu tab 🎯 Kesimpulan tiap simbol), atau perubahan rezim pasar "
                         "ke depan. Ini alat eksplorasi trade-off, bukan rekomendasi alokasi final."
                     )
+
+# ==========================================================================
+# ==== SECTION 5.7: ARENA STRATEGI (strategy_arena.py) ====
+# ==========================================================================
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _cached_live_leaderboard(symbol: str, log_mtime: float,
+                             fee_buy_bps: float, fee_sell_bps: float,
+                             slippage_bps: float, trading_days: float):
+    """Cache 5 menit, di-key mtime file log — leaderboard live tidak
+    dihitung ulang tiap rerun widget, tapi tetap refresh otomatis begitu
+    ada baris log baru (auto-tracking di bawah menulis file -> mtime
+    berubah -> cache miss -> recompute tepat saat dibutuhkan)."""
+    return arena.live_leaderboard(symbol, fee_buy_bps=fee_buy_bps,
+                                  fee_sell_bps=fee_sell_bps,
+                                  slippage_bps=slippage_bps,
+                                  trading_days=trading_days)
+
+
+# ---- TAB 10: ARENA STRATEGI ----
+with tab10:
+    st.subheader("🏟️ Arena Strategi — Live Test & Leaderboard Poin")
+    st.caption(
+        "Semua strategi diuji di data & biaya yang SAMA (fee beli/jual & slippage "
+        "dari sidebar), dieksekusi T+1 (anti-lookahead). Dua lapis penilaian: "
+        "**Poin komposit 0-100** (kualitas absolut: excess return vs B&H, Sharpe, "
+        "win rate, profit factor, drawdown, konsistensi) dan **Poin Liga** "
+        "(relatif: ranking per periode, gaya F1 — menghargai konsistensi, bukan "
+        "cuma total akhir)."
+    )
+
+    # ---- AUTO LIVE TRACKING (idempotent, murah — pola sama dengan ----
+    # ---- log_signal_snapshot di tab Signal) ----
+    # update_arena_log dedupe per (symbol, strategy, date), jadi aman
+    # dipanggil otomatis tiap kali analisis dijalankan — tidak perlu tombol.
+    # Pengisian harian penuh tetap di-handle precompute.py via GitHub Actions
+    # (yang meng-cover seluruh watchlist, bukan cuma simbol yang sedang dilihat).
+    try:
+        _arena_auto = arena.update_arena_log(symbol, asset_type, price_df)
+        _arena_new = sum(1 for v in _arena_auto.values() if str(v).startswith("+"))
+        if _arena_new:
+            st.caption(f"📡 Live tracking otomatis: {_arena_new} strategi mendapat "
+                       f"baris baru hari ini.")
+    except Exception as _e:
+        st.caption(f"⚠️ Auto live tracking gagal ({_e}) — tidak memblokir analisis utama.")
+
+    # ---- A. EVALUASI HISTORIS (in-sample — untuk ngembangin strategi) ----
+    st.markdown("#### ⚔️ Evaluasi Historis (semua strategi, data sama)")
+    st.caption(
+        "⚠️ Ini IN-SAMPLE — strategi bisa 'menang' murni karena cocok dengan "
+        "periode ini. Pakai untuk screening & pengembangan strategi; bukti "
+        "edge yang jujur ada di Live Tracking di bawah."
+    )
+    if st.button("⚔️ Jalankan Arena (historis)", key="run_arena_btn"):
+        with st.spinner(f"Menjalankan {len(arena.STRATEGIES)} strategi di {symbol}..."):
+            st.session_state["arena_result"] = arena.evaluate_arena(
+                price_df, fee_buy_bps=fee_buy_bps, fee_sell_bps=fee_sell_bps,
+                slippage_bps=slippage_bps, trading_days=trading_days)
+            st.session_state["arena_result_key"] = (
+                symbol, fee_buy_bps, fee_sell_bps, slippage_bps, len(price_df))
+
+    if "arena_result" in st.session_state:
+        _arena_key_now = (symbol, fee_buy_bps, fee_sell_bps, slippage_bps, len(price_df))
+        if st.session_state.get("arena_result_key") != _arena_key_now:
+            st.warning("⚠️ Simbol/parameter biaya berubah sejak run terakhir — "
+                       "hasil di bawah STALE. Klik ulang 'Jalankan Arena'.")
+        ar = st.session_state["arena_result"]
+        lb = ar["leaderboard"]
+        metric_cols = ["Rank", "Strategi", "Poin", "Poin Liga", "Total Return %",
+                       "vs B&H (pts)", "Sharpe", "Max DD %", "Win Rate %",
+                       "Profit Factor", "Konsistensi %", "Trades", "Exposure %"]
+        st.dataframe(lb[[c for c in metric_cols if c in lb.columns]],
+                     use_container_width=True, hide_index=True)
+
+        with st.expander("🔍 Rincian poin per komponen (transparansi scoring)"):
+            comp_cols = [c for c in lb.columns if c.startswith("  · ")]
+            st.dataframe(lb[["Strategi", "Poin"] + comp_cols],
+                         use_container_width=True, hide_index=True)
+            st.caption("Bobot: " + " · ".join(f"{k} {v}" for k, v in arena.POINTS_WEIGHTS.items())
+                       + ". Strategi dengan < 3 trade didiskon otomatis "
+                         "(tidak bisa dibedakan dari kebetulan).")
+
+        fig_arena = go.Figure()
+        for name, eq in ar["equities"].items():
+            is_bench = "benchmark" in name.lower()
+            fig_arena.add_trace(go.Scatter(
+                x=eq.index, y=eq.values, name=name,
+                line=dict(width=2.5 if is_bench else 1.2,
+                          dash="dot" if is_bench else "solid"),
+                opacity=1.0 if is_bench else 0.85))
+        fig_arena.update_layout(title=f"Equity Curve Semua Strategi — {symbol} "
+                                      f"(modal awal dinormalisasi 100)",
+                                height=480, yaxis_title="Equity")
+        st.plotly_chart(fig_arena, use_container_width=True)
+
+        fig_pts = go.Figure(go.Bar(
+            x=lb["Poin"], y=lb["Strategi"], orientation="h",
+            marker_color="#636efa"))
+        fig_pts.update_layout(title="Poin Komposit (0-100)", height=350,
+                              yaxis=dict(autorange="reversed"))
+        st.plotly_chart(fig_pts, use_container_width=True)
+
+    st.markdown("---")
+
+    # ---- B. LIVE TRACKING (out-of-sample — bukti yang sebenarnya) ----
+    st.markdown("#### 📡 Live Tracking — Forward Test yang Sebenarnya")
+    st.caption(
+        "Posisi tiap strategi dicatat per hari ke `strategy_arena_log.csv` "
+        "secara otomatis (lihat catatan di atas + precompute.py tiap sore). "
+        "Performa live dihitung HANYA dari hari-hari sejak tracking dimulai — "
+        "out-of-sample murni, standar yang sama dengan Signal Log (4c). "
+        "CSV lokal HILANG saat Streamlit Cloud sleep/restart — untuk persist, "
+        "sambungkan ke Google Sheets seperti pola trade journal."
+    )
+
+    _log_mtime = (os.path.getmtime(arena.ARENA_LOG_FILE)
+                  if os.path.exists(arena.ARENA_LOG_FILE) else 0.0)
+    live = _cached_live_leaderboard(symbol, _log_mtime, fee_buy_bps,
+                                    fee_sell_bps, slippage_bps, trading_days)
+    if live is None:
+        st.info("Live tracking belum cukup umur (minimal ~10 hari tercatat per "
+                "strategi). Log sudah mulai dicatat otomatis dari run ini — "
+                "kembali lagi besok/dst, leaderboard live terisi sendiri.")
+    else:
+        st.caption(f"📅 Live sejak **{live['tracking_since']}** "
+                   f"({live['n_live_days']} hari tercatat) — out-of-sample murni.")
+        st.dataframe(live["leaderboard"], use_container_width=True, hide_index=True)
+
+        fig_live = go.Figure()
+        for name, eq in live["equities"].items():
+            is_bench = "benchmark" in name.lower()
+            fig_live.add_trace(go.Scatter(
+                x=eq.index, y=eq.values, name=name,
+                line=dict(width=2.5 if is_bench else 1.2,
+                          dash="dot" if is_bench else "solid")))
+        fig_live.update_layout(title="Equity LIVE (sejak tracking dimulai, modal=100)",
+                               height=420, yaxis_title="Equity")
+        st.plotly_chart(fig_live, use_container_width=True)
+
+        with st.expander("📅 Return mingguan per strategi (bahan poin liga)"):
+            st.dataframe((live["weekly_returns"] * 100).round(2),
+                         use_container_width=True)
+
+        if live["n_live_days"] < 60:
+            st.warning(
+                f"⚠️ Baru {live['n_live_days']} hari live — ranking di atas masih "
+                f"sangat rentan kebetulan. Standar yang dipakai dashboard ini di "
+                f"tempat lain (bootstrap, walk-forward) berlaku juga di sini: "
+                f"perlakukan sebagai indikasi awal, bukan kesimpulan, minimal "
+                f"sampai ~3-6 bulan."
+            )
+
+    # ---- C. KEMBANGKAN STRATEGI BARU ----
+    with st.expander("🛠️ Cara menambah strategi baru ke arena"):
+        st.markdown(
+            "Cukup definisikan fungsi yang mengembalikan posisi 0/1, lalu daftarkan:\n\n"
+            "```python\n"
+            "import strategy_arena as arena\n\n"
+            "def strategi_ku(df, lookback=15):\n"
+            "    # contoh: posisi selama harga di atas highest-close N hari lalu\n"
+            "    return (df['Close'] > df['Close'].rolling(lookback).max().shift(1)"
+            ").astype(float)\n\n"
+            "arena.register_strategy('Strategi Ku', strategi_ku, {'lookback': 15})\n"
+            "```\n\n"
+            "Aturan main (otomatis ditegakkan engine): nilai hari T cuma boleh "
+            "lihat data s/d hari T (backward-looking), posisi 0-1, dieksekusi T+1 "
+            "dengan fee & slippage dari sidebar. Setelah didaftarkan, strategi baru "
+            "otomatis ikut evaluasi historis, live tracking, dan leaderboard poin."
+        )
