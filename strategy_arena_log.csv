@@ -20519,3 +20519,43 @@ date,symbol,asset_type,strategy,position,close
 2026-10-15,SMGR,stock_id,Momentum ROC (20),0.0,1600.0
 2026-10-15,SMGR,stock_id,Stoch-BB (engine),1.0,1600.0
 2026-10-15,SMGR,stock_id,Composite (engine),0.0,1600.0
+2026-10-16,BBCA,stock_id,Buy & Hold (benchmark),1.0,5175.0
+2026-10-16,BBCA,stock_id,MA Crossover (10/30),0.0,5175.0
+2026-10-16,BBCA,stock_id,RSI Mean Reversion,1.0,5175.0
+2026-10-16,BBCA,stock_id,MACD Trend,0.0,5175.0
+2026-10-16,BBCA,stock_id,Bollinger Breakout,0.0,5175.0
+2026-10-16,BBCA,stock_id,Momentum ROC (20),0.0,5175.0
+2026-10-16,BBCA,stock_id,Stoch-BB (engine),0.0,5175.0
+2026-10-16,BBCA,stock_id,Composite (engine),1.0,5175.0
+2026-10-16,TLKM,stock_id,Buy & Hold (benchmark),1.0,1900.0
+2026-10-16,TLKM,stock_id,MA Crossover (10/30),0.0,1900.0
+2026-10-16,TLKM,stock_id,RSI Mean Reversion,1.0,1900.0
+2026-10-16,TLKM,stock_id,MACD Trend,0.0,1900.0
+2026-10-16,TLKM,stock_id,Bollinger Breakout,0.0,1900.0
+2026-10-16,TLKM,stock_id,Momentum ROC (20),0.0,1900.0
+2026-10-16,TLKM,stock_id,Stoch-BB (engine),0.0,1900.0
+2026-10-16,TLKM,stock_id,Composite (engine),1.0,1900.0
+2026-10-16,UNVR,stock_id,Buy & Hold (benchmark),1.0,1390.0
+2026-10-16,UNVR,stock_id,MA Crossover (10/30),0.0,1390.0
+2026-10-16,UNVR,stock_id,RSI Mean Reversion,1.0,1390.0
+2026-10-16,UNVR,stock_id,MACD Trend,0.0,1390.0
+2026-10-16,UNVR,stock_id,Bollinger Breakout,0.0,1390.0
+2026-10-16,UNVR,stock_id,Momentum ROC (20),0.0,1390.0
+2026-10-16,UNVR,stock_id,Stoch-BB (engine),1.0,1390.0
+2026-10-16,UNVR,stock_id,Composite (engine),0.0,1390.0
+2026-10-16,ANTM,stock_id,Buy & Hold (benchmark),1.0,2550.0
+2026-10-16,ANTM,stock_id,MA Crossover (10/30),0.0,2550.0
+2026-10-16,ANTM,stock_id,RSI Mean Reversion,1.0,2550.0
+2026-10-16,ANTM,stock_id,MACD Trend,0.0,2550.0
+2026-10-16,ANTM,stock_id,Bollinger Breakout,0.0,2550.0
+2026-10-16,ANTM,stock_id,Momentum ROC (20),0.0,2550.0
+2026-10-16,ANTM,stock_id,Stoch-BB (engine),0.0,2550.0
+2026-10-16,ANTM,stock_id,Composite (engine),1.0,2550.0
+2026-10-16,SMGR,stock_id,Buy & Hold (benchmark),1.0,1360.0
+2026-10-16,SMGR,stock_id,MA Crossover (10/30),0.0,1360.0
+2026-10-16,SMGR,stock_id,RSI Mean Reversion,0.0,1360.0
+2026-10-16,SMGR,stock_id,MACD Trend,0.0,1360.0
+2026-10-16,SMGR,stock_id,Bollinger Breakout,0.0,1360.0
+2026-10-16,SMGR,stock_id,Momentum ROC (20),0.0,1360.0
+2026-10-16,SMGR,stock_id,Stoch-BB (engine),1.0,1360.0
+2026-10-16,SMGR,stock_id,Composite (engine),0.0,1360.0
